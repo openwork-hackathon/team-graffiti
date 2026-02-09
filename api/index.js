@@ -1,10 +1,16 @@
 import { Redis } from "@upstash/redis";
-import crypto from "crypto";
+import crypto from "node:crypto";
 
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN,
-});
+let _redis;
+function getRedis() {
+  if (!_redis) {
+    _redis = new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    });
+  }
+  return _redis;
+}
 
 const CANVAS_W = 900;
 const CANVAS_H = 1600;
@@ -31,7 +37,7 @@ async function handleRegister(req, res) {
 
   const cleanName = name.trim().slice(0, 32);
 
-  const existing = await redis.hget("graffiti:agents:names", cleanName.toLowerCase());
+  const existing = await getRedis().hget("graffiti:agents:names", cleanName.toLowerCase());
   if (existing) {
     return json(res, { error: "name already taken" }, 409);
   }
@@ -44,8 +50,8 @@ async function handleRegister(req, res) {
     pixels_painted: 0,
   };
 
-  await redis.hset("graffiti:agents", { [apiKey]: JSON.stringify(agent) });
-  await redis.hset("graffiti:agents:names", { [cleanName.toLowerCase()]: apiKey });
+  await getRedis().hset("graffiti:agents", { [apiKey]: JSON.stringify(agent) });
+  await getRedis().hset("graffiti:agents:names", { [cleanName.toLowerCase()]: apiKey });
 
   return json(res, {
     name: cleanName,
@@ -64,7 +70,7 @@ async function handlePaint(req, res) {
     return json(res, { error: "Authorization header required: Bearer grf_xxx" }, 401);
   }
 
-  const agentData = await redis.hget("graffiti:agents", apiKey);
+  const agentData = await getRedis().hget("graffiti:agents", apiKey);
   if (!agentData) {
     return json(res, { error: "invalid API key" }, 401);
   }
@@ -114,18 +120,18 @@ async function handlePaint(req, res) {
     painted.push([row, col]);
   }
 
-  await redis.hset("graffiti:canvas", updates);
+  await getRedis().hset("graffiti:canvas", updates);
 
   agent.pixels_painted = (agent.pixels_painted || 0) + painted.length;
-  await redis.hset("graffiti:agents", { [apiKey]: JSON.stringify(agent) });
+  await getRedis().hset("graffiti:agents", { [apiKey]: JSON.stringify(agent) });
 
-  await redis.lpush("graffiti:log", JSON.stringify({
+  await getRedis().lpush("graffiti:log", JSON.stringify({
     agent: agent.name,
     color: colorHex,
     pixels: painted,
     time: new Date().toISOString(),
   }));
-  await redis.ltrim("graffiti:log", 0, 999);
+  await getRedis().ltrim("graffiti:log", 0, 999);
 
   return json(res, {
     painted: painted.length,
@@ -136,7 +142,7 @@ async function handlePaint(req, res) {
 }
 
 async function handleCanvas(req, res) {
-  const data = await redis.hgetall("graffiti:canvas");
+  const data = await getRedis().hgetall("graffiti:canvas");
   return json(res, {
     width: CANVAS_W,
     height: CANVAS_H,
@@ -145,7 +151,7 @@ async function handleCanvas(req, res) {
 }
 
 async function handleAgents(req, res) {
-  const data = await redis.hgetall("graffiti:agents");
+  const data = await getRedis().hgetall("graffiti:agents");
   if (!data) return json(res, { agents: [] });
 
   const agents = Object.values(data).map((v) => {
@@ -158,7 +164,7 @@ async function handleAgents(req, res) {
 }
 
 async function handleLog(req, res) {
-  const entries = await redis.lrange("graffiti:log", 0, 49);
+  const entries = await getRedis().lrange("graffiti:log", 0, 49);
   const log = (entries || []).map((e) => (typeof e === "string" ? JSON.parse(e) : e));
   return json(res, { log });
 }
