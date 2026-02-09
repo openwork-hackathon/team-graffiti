@@ -1,5 +1,6 @@
 import { Redis } from "@upstash/redis";
 import crypto from "node:crypto";
+import { ethers } from "ethers";
 
 let _redis;
 function getRedis() {
@@ -16,6 +17,36 @@ const CANVAS_W = 640;
 const CANVAS_H = 480;
 const MAX_PIXELS_PER_PAINT = 20;
 
+// --- Token gating ---
+const BASE_RPC = "https://mainnet.base.org";
+const GRAFFITI_TOKEN = process.env.GRAFFITI_TOKEN_ADDRESS;
+const MIN_BALANCE = ethers.parseEther("1");
+const ERC20_ABI = ["function balanceOf(address) view returns (uint256)"];
+
+let _provider;
+function getProvider() {
+  if (!_provider) _provider = new ethers.JsonRpcProvider(BASE_RPC);
+  return _provider;
+}
+
+async function checkTokenBalance(wallet) {
+  if (!GRAFFITI_TOKEN) return true; // graceful degradation before token is set
+  if (!ethers.isAddress(wallet)) return false;
+  const contract = new ethers.Contract(GRAFFITI_TOKEN, ERC20_ABI, getProvider());
+  const balance = await contract.balanceOf(wallet);
+  return balance >= MIN_BALANCE;
+}
+
+async function checkTokenBalanceCached(wallet) {
+  if (!GRAFFITI_TOKEN) return true;
+  const key = `graffiti:balance:${wallet.toLowerCase()}`;
+  const cached = await getRedis().get(key);
+  if (cached !== null) return cached === "1";
+  const has = await checkTokenBalance(wallet);
+  await getRedis().set(key, has ? "1" : "0", { ex: 300 });
+  return has;
+}
+
 function cors(res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
@@ -30,9 +61,23 @@ function json(res, data, status = 200) {
 // --- Handlers ---
 
 async function handleRegister(req, res) {
-  const { name } = req.body || {};
+  const { name, wallet_address } = req.body || {};
   if (!name || typeof name !== "string" || name.trim().length < 2) {
     return json(res, { error: "name is required (min 2 chars)" }, 400);
+  }
+  if (!wallet_address || typeof wallet_address !== "string") {
+    return json(res, { error: "wallet_address is required (Base chain address holding $GRAFFITI tokens)" }, 400);
+  }
+  if (!ethers.isAddress(wallet_address)) {
+    return json(res, { error: "invalid wallet_address" }, 400);
+  }
+
+  const hasTokens = await checkTokenBalance(wallet_address);
+  if (!hasTokens) {
+    return json(res, {
+      error: "wallet must hold at least 1 $GRAFFITI token",
+      buy_tokens: "https://mint.club/token/base/GRAFFITI",
+    }, 403);
   }
 
   const cleanName = name.trim().slice(0, 32);
@@ -42,16 +87,23 @@ async function handleRegister(req, res) {
     return json(res, { error: "name already taken" }, 409);
   }
 
+  const existingWallet = await getRedis().hget("graffiti:agents:wallets", wallet_address.toLowerCase());
+  if (existingWallet) {
+    return json(res, { error: "wallet already registered" }, 409);
+  }
+
   const apiKey = "grf_" + crypto.randomBytes(24).toString("hex");
   const agent = {
     name: cleanName,
     api_key: apiKey,
+    wallet_address: wallet_address.toLowerCase(),
     created_at: new Date().toISOString(),
     pixels_painted: 0,
   };
 
   await getRedis().hset("graffiti:agents", { [apiKey]: JSON.stringify(agent) });
   await getRedis().hset("graffiti:agents:names", { [cleanName.toLowerCase()]: apiKey });
+  await getRedis().hset("graffiti:agents:wallets", { [wallet_address.toLowerCase()]: apiKey });
 
   return json(res, {
     name: cleanName,
@@ -76,6 +128,17 @@ async function handlePaint(req, res) {
   }
 
   const agent = typeof agentData === "string" ? JSON.parse(agentData) : agentData;
+
+  if (agent.wallet_address) {
+    const hasTokens = await checkTokenBalanceCached(agent.wallet_address);
+    if (!hasTokens) {
+      return json(res, {
+        error: "wallet no longer holds $GRAFFITI tokens",
+        buy_tokens: "https://mint.club/token/base/GRAFFITI",
+      }, 403);
+    }
+  }
+
   const { color, pixels } = req.body || {};
 
   if (!color || !Array.isArray(color) || color.length !== 3) {
