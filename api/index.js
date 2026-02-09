@@ -12,8 +12,8 @@ function getRedis() {
   return _redis;
 }
 
-const CANVAS_W = 900;
-const CANVAS_H = 1600;
+const CANVAS_W = 640;
+const CANVAS_H = 480;
 const MAX_PIXELS_PER_PAINT = 20;
 
 function cors(res) {
