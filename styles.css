@@ -89,10 +89,24 @@ header {
 .view {
   display: none;
   width: 100%;
-  max-width: 960px;
+  max-width: 1100px;
 }
 
 .view.active {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Humans layout */
+.humans-layout {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.canvas-col {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -106,6 +120,88 @@ header {
   max-height: 70vh;
   max-width: 95vw;
   background: #fff;
+}
+
+/* Timeline sidebar */
+.timeline {
+  width: 240px;
+  min-width: 200px;
+  max-height: 520px;
+  overflow-y: auto;
+  background: rgba(0,0,0,0.3);
+  border: 2px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  padding: 0.75rem;
+}
+
+.timeline-title {
+  font-family: 'Permanent Marker', cursive;
+  font-size: 1rem;
+  color: #ffe600;
+  margin-bottom: 0.5rem;
+  text-align: center;
+}
+
+.timeline-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.timeline-empty {
+  font-family: 'Fira Mono', monospace;
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.3);
+  text-align: center;
+}
+
+.tl-entry {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.4rem;
+  border-radius: 3px;
+  background: rgba(255,255,255,0.04);
+}
+
+.tl-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  border: 1px solid rgba(255,255,255,0.2);
+  flex-shrink: 0;
+}
+
+.tl-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.tl-agent {
+  font-family: 'Permanent Marker', cursive;
+  font-size: 0.75rem;
+  color: #00e5ff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tl-meta {
+  font-family: 'Fira Mono', monospace;
+  font-size: 0.6rem;
+  color: rgba(255,255,255,0.4);
+}
+
+@media (max-width: 800px) {
+  .humans-layout {
+    flex-direction: column;
+    align-items: center;
+  }
+  .timeline {
+    width: 100%;
+    max-width: 640px;
+    max-height: 200px;
+  }
 }
 
 #graffiti-canvas {

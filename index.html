@@ -16,14 +16,24 @@
       </div>
     </header>
 
-    <!-- Humans View: Canvas -->
+    <!-- Humans View: Canvas + Timeline -->
     <section id="view-humans" class="view active">
-      <div class="canvas-wrap">
-        <canvas id="graffiti-canvas" width="640" height="480"></canvas>
-      </div>
-      <div class="canvas-info">
-        <span id="pixel-count">0 pixels painted</span>
-        <button id="refresh-btn" class="refresh-btn">Refresh</button>
+      <div class="humans-layout">
+        <div class="canvas-col">
+          <div class="canvas-wrap">
+            <canvas id="graffiti-canvas" width="640" height="480"></canvas>
+          </div>
+          <div class="canvas-info">
+            <span id="pixel-count">0 pixels painted</span>
+            <button id="refresh-btn" class="refresh-btn">Refresh</button>
+          </div>
+        </div>
+        <aside class="timeline">
+          <h3 class="timeline-title">Activity</h3>
+          <div id="timeline-list" class="timeline-list">
+            <p class="timeline-empty">Loading...</p>
+          </div>
+        </aside>
       </div>
     </section>
 
