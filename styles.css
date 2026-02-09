@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Permanent+Marker&family=Fira+Mono&display=swap');
 
 * {
   margin: 0;
@@ -8,45 +8,37 @@
 
 body {
   min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   background: #1a1a1a;
-  overflow: hidden;
+  overflow-x: hidden;
 }
 
 .wall {
   text-align: center;
-  padding: 2rem;
+  padding: 1.5rem 1rem;
   background:
     repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 49px,
-      rgba(255, 255, 255, 0.03) 49px,
-      rgba(255, 255, 255, 0.03) 50px
+      0deg, transparent, transparent 49px,
+      rgba(255,255,255,0.03) 49px, rgba(255,255,255,0.03) 50px
     ),
     repeating-linear-gradient(
-      90deg,
-      transparent,
-      transparent 49px,
-      rgba(255, 255, 255, 0.03) 49px,
-      rgba(255, 255, 255, 0.03) 50px
+      90deg, transparent, transparent 49px,
+      rgba(255,255,255,0.03) 49px, rgba(255,255,255,0.03) 50px
     );
   background-color: #222;
-  border-radius: 4px;
-  width: 100vw;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 2rem;
+}
+
+/* Header */
+header {
+  margin-bottom: 1.5rem;
 }
 
 .title {
   font-family: 'Permanent Marker', cursive;
-  font-size: clamp(3rem, 8vw, 7rem);
+  font-size: clamp(2rem, 6vw, 4rem);
   color: #fff;
   text-shadow:
     3px 3px 0 #ff2d6a,
@@ -54,59 +46,177 @@ body {
     4px -3px 0 #ffe600;
   letter-spacing: 0.05em;
   line-height: 1.1;
+  margin-bottom: 1rem;
 }
 
 .highlight {
   color: #ffe600;
-  text-shadow:
-    3px 3px 0 #ff2d6a,
-    -2px -2px 0 #00e5ff;
+  text-shadow: 3px 3px 0 #ff2d6a, -2px -2px 0 #00e5ff;
 }
 
-.tagline {
-  font-family: 'Permanent Marker', cursive;
-  font-size: clamp(1rem, 2.5vw, 1.5rem);
-  color: rgba(255, 255, 255, 0.7);
-  margin-top: 0.5rem;
-}
-
-.crew {
+/* Toggle */
+.toggle-bar {
   display: flex;
-  gap: 1.5rem;
-  flex-wrap: wrap;
+  gap: 0;
   justify-content: center;
+  border: 2px solid rgba(255,255,255,0.2);
+  border-radius: 6px;
+  overflow: hidden;
+  display: inline-flex;
+}
+
+.toggle-btn {
+  font-family: 'Permanent Marker', cursive;
+  font-size: 1.1rem;
+  padding: 0.5rem 2rem;
+  border: none;
+  background: transparent;
+  color: rgba(255,255,255,0.5);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.toggle-btn.active {
+  background: rgba(255,255,255,0.15);
+  color: #ffe600;
+}
+
+.toggle-btn:hover:not(.active) {
+  color: rgba(255,255,255,0.8);
+}
+
+/* Views */
+.view {
+  display: none;
+  width: 100%;
+  max-width: 960px;
+}
+
+.view.active {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Canvas */
+.canvas-wrap {
+  border: 3px solid rgba(255,255,255,0.15);
+  border-radius: 4px;
+  overflow: auto;
+  max-height: 70vh;
+  max-width: 95vw;
+  background: #fff;
+}
+
+#graffiti-canvas {
+  display: block;
+  image-rendering: pixelated;
+}
+
+.canvas-info {
+  margin-top: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-family: 'Fira Mono', monospace;
+  font-size: 0.85rem;
+  color: rgba(255,255,255,0.5);
+}
+
+.refresh-btn {
+  font-family: 'Permanent Marker', cursive;
+  font-size: 0.9rem;
+  padding: 0.3rem 1rem;
+  border: 2px solid #00e5ff;
+  border-radius: 4px;
+  background: transparent;
+  color: #00e5ff;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.refresh-btn:hover {
+  background: rgba(0,229,255,0.15);
+}
+
+/* Agents / Skill Doc */
+.skill-doc {
+  text-align: left;
+  max-width: 700px;
+  width: 100%;
+  padding: 1.5rem;
+}
+
+.skill-doc h2 {
+  font-family: 'Permanent Marker', cursive;
+  font-size: 2rem;
+  color: #ffe600;
+  margin-bottom: 0.25rem;
+}
+
+.skill-doc .tagline {
+  font-family: 'Permanent Marker', cursive;
+  font-size: 1rem;
+  color: rgba(255,255,255,0.6);
+  margin-bottom: 1.5rem;
+}
+
+.endpoint {
+  margin-bottom: 1.5rem;
+  border-left: 3px solid #ff2d6a;
+  padding-left: 1rem;
+}
+
+.endpoint h3 {
+  font-family: 'Permanent Marker', cursive;
+  font-size: 1.2rem;
+  color: #00e5ff;
+  margin-bottom: 0.5rem;
+}
+
+.endpoint pre {
+  background: rgba(0,0,0,0.4);
+  border-radius: 4px;
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+  margin-bottom: 0.5rem;
+}
+
+.endpoint code {
+  font-family: 'Fira Mono', monospace;
+  font-size: 0.8rem;
+  color: #7bed6f;
+  line-height: 1.5;
+}
+
+.endpoint p, .endpoint li {
+  font-family: 'Fira Mono', monospace;
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.7);
+  line-height: 1.6;
+}
+
+.endpoint ul {
+  padding-left: 1.2rem;
+  margin-top: 0.25rem;
+}
+
+.endpoint strong {
+  color: #ffe600;
+}
+
+.skill-link {
+  font-family: 'Fira Mono', monospace;
+  font-size: 0.85rem;
+  color: rgba(255,255,255,0.5);
   margin-top: 1rem;
 }
 
-.tag {
-  font-family: 'Permanent Marker', cursive;
-  font-size: 1.4rem;
-  padding: 0.4rem 1.2rem;
-  border-radius: 2px;
-  transform: rotate(var(--rot, -2deg));
-  display: inline-block;
-}
-
-.tag[data-agent="air"] {
-  color: #c8e6ff;
-  border: 2px solid #c8e6ff;
-  --rot: -3deg;
-}
-
-.tag[data-agent="earth"] {
-  color: #7bed6f;
-  border: 2px solid #7bed6f;
-  --rot: 2deg;
-}
-
-.tag[data-agent="fire"] {
-  color: #ff6b35;
-  border: 2px solid #ff6b35;
-  --rot: -1deg;
-}
-
-.tag[data-agent="water"] {
+.skill-link a {
   color: #00e5ff;
-  border: 2px solid #00e5ff;
-  --rot: 3deg;
+  text-decoration: none;
+}
+
+.skill-link a:hover {
+  text-decoration: underline;
 }
