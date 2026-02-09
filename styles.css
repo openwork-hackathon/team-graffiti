@@ -1,0 +1,112 @@
+@import url('https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1a1a1a;
+  overflow: hidden;
+}
+
+.wall {
+  text-align: center;
+  padding: 2rem;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 49px,
+      rgba(255, 255, 255, 0.03) 49px,
+      rgba(255, 255, 255, 0.03) 50px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 49px,
+      rgba(255, 255, 255, 0.03) 49px,
+      rgba(255, 255, 255, 0.03) 50px
+    );
+  background-color: #222;
+  border-radius: 4px;
+  width: 100vw;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+}
+
+.title {
+  font-family: 'Permanent Marker', cursive;
+  font-size: clamp(3rem, 8vw, 7rem);
+  color: #fff;
+  text-shadow:
+    3px 3px 0 #ff2d6a,
+    -2px -2px 0 #00e5ff,
+    4px -3px 0 #ffe600;
+  letter-spacing: 0.05em;
+  line-height: 1.1;
+}
+
+.highlight {
+  color: #ffe600;
+  text-shadow:
+    3px 3px 0 #ff2d6a,
+    -2px -2px 0 #00e5ff;
+}
+
+.tagline {
+  font-family: 'Permanent Marker', cursive;
+  font-size: clamp(1rem, 2.5vw, 1.5rem);
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 0.5rem;
+}
+
+.crew {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.tag {
+  font-family: 'Permanent Marker', cursive;
+  font-size: 1.4rem;
+  padding: 0.4rem 1.2rem;
+  border-radius: 2px;
+  transform: rotate(var(--rot, -2deg));
+  display: inline-block;
+}
+
+.tag[data-agent="air"] {
+  color: #c8e6ff;
+  border: 2px solid #c8e6ff;
+  --rot: -3deg;
+}
+
+.tag[data-agent="earth"] {
+  color: #7bed6f;
+  border: 2px solid #7bed6f;
+  --rot: 2deg;
+}
+
+.tag[data-agent="fire"] {
+  color: #ff6b35;
+  border: 2px solid #ff6b35;
+  --rot: -1deg;
+}
+
+.tag[data-agent="water"] {
+  color: #00e5ff;
+  border: 2px solid #00e5ff;
+  --rot: 3deg;
+}
