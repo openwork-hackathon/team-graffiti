@@ -10,33 +10,30 @@ const CANVAS_W = 900;
 const CANVAS_H = 1600;
 const MAX_PIXELS_PER_PAINT = 20;
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
+function cors(res) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+}
 
-function json(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { "Content-Type": "application/json", ...CORS_HEADERS },
-  });
+function json(res, data, status = 200) {
+  cors(res);
+  res.status(status).json(data);
 }
 
 // --- Handlers ---
 
-async function handleRegister(body) {
-  const { name } = body || {};
+async function handleRegister(req, res) {
+  const { name } = req.body || {};
   if (!name || typeof name !== "string" || name.trim().length < 2) {
-    return json({ error: "name is required (min 2 chars)" }, 400);
+    return json(res, { error: "name is required (min 2 chars)" }, 400);
   }
 
   const cleanName = name.trim().slice(0, 32);
 
-  // Check if name is taken
   const existing = await redis.hget("graffiti:agents:names", cleanName.toLowerCase());
   if (existing) {
-    return json({ error: "name already taken" }, 409);
+    return json(res, { error: "name already taken" }, 409);
   }
 
   const apiKey = "grf_" + crypto.randomBytes(24).toString("hex");
@@ -50,7 +47,7 @@ async function handleRegister(body) {
   await redis.hset("graffiti:agents", { [apiKey]: JSON.stringify(agent) });
   await redis.hset("graffiti:agents:names", { [cleanName.toLowerCase()]: apiKey });
 
-  return json({
+  return json(res, {
     name: cleanName,
     api_key: apiKey,
     message: "Welcome to Graffiti! Use your API key to paint pixels.",
@@ -59,36 +56,36 @@ async function handleRegister(body) {
   });
 }
 
-async function handlePaint(body, apiKey) {
+async function handlePaint(req, res) {
+  const auth = req.headers.authorization || "";
+  const apiKey = auth.replace(/^Bearer\s+/i, "").trim();
+
   if (!apiKey) {
-    return json({ error: "Authorization header required: Bearer grf_xxx" }, 401);
+    return json(res, { error: "Authorization header required: Bearer grf_xxx" }, 401);
   }
 
   const agentData = await redis.hget("graffiti:agents", apiKey);
   if (!agentData) {
-    return json({ error: "invalid API key" }, 401);
+    return json(res, { error: "invalid API key" }, 401);
   }
 
   const agent = typeof agentData === "string" ? JSON.parse(agentData) : agentData;
+  const { color, pixels } = req.body || {};
 
-  const { color, pixels } = body || {};
-
-  // Validate color
   if (!color || !Array.isArray(color) || color.length !== 3) {
-    return json({ error: "color must be [r, g, b] array" }, 400);
+    return json(res, { error: "color must be [r, g, b] array" }, 400);
   }
   for (const c of color) {
     if (typeof c !== "number" || c < 0 || c > 255 || !Number.isInteger(c)) {
-      return json({ error: "color values must be integers 0-255" }, 400);
+      return json(res, { error: "color values must be integers 0-255" }, 400);
     }
   }
 
-  // Validate pixels
   if (!pixels || !Array.isArray(pixels) || pixels.length === 0) {
-    return json({ error: "pixels must be a non-empty array of [row, col] pairs" }, 400);
+    return json(res, { error: "pixels must be a non-empty array of [row, col] pairs" }, 400);
   }
   if (pixels.length > MAX_PIXELS_PER_PAINT) {
-    return json({ error: `max ${MAX_PIXELS_PER_PAINT} pixels per request` }, 400);
+    return json(res, { error: `max ${MAX_PIXELS_PER_PAINT} pixels per request` }, 400);
   }
 
   const colorHex =
@@ -101,7 +98,7 @@ async function handlePaint(body, apiKey) {
 
   for (const px of pixels) {
     if (!Array.isArray(px) || px.length !== 2) {
-      return json({ error: "each pixel must be [row, col]" }, 400);
+      return json(res, { error: "each pixel must be [row, col]" }, 400);
     }
     const [row, col] = px;
     if (
@@ -109,23 +106,19 @@ async function handlePaint(body, apiKey) {
       !Number.isInteger(row) || !Number.isInteger(col) ||
       row < 0 || row >= CANVAS_H || col < 0 || col >= CANVAS_W
     ) {
-      return json({
+      return json(res, {
         error: `pixel [${row}, ${col}] out of bounds. Canvas is ${CANVAS_H} rows x ${CANVAS_W} cols`,
       }, 400);
     }
-    const key = `${row},${col}`;
-    updates[key] = colorHex;
+    updates[`${row},${col}`] = colorHex;
     painted.push([row, col]);
   }
 
-  // Write pixels to Redis
   await redis.hset("graffiti:canvas", updates);
 
-  // Update agent stats
   agent.pixels_painted = (agent.pixels_painted || 0) + painted.length;
   await redis.hset("graffiti:agents", { [apiKey]: JSON.stringify(agent) });
 
-  // Log the paint action
   await redis.lpush("graffiti:log", JSON.stringify({
     agent: agent.name,
     color: colorHex,
@@ -134,7 +127,7 @@ async function handlePaint(body, apiKey) {
   }));
   await redis.ltrim("graffiti:log", 0, 999);
 
-  return json({
+  return json(res, {
     painted: painted.length,
     color: color,
     agent: agent.name,
@@ -142,18 +135,18 @@ async function handlePaint(body, apiKey) {
   });
 }
 
-async function handleCanvas() {
+async function handleCanvas(req, res) {
   const data = await redis.hgetall("graffiti:canvas");
-  return json({
+  return json(res, {
     width: CANVAS_W,
     height: CANVAS_H,
     pixels: data || {},
   });
 }
 
-async function handleAgents() {
+async function handleAgents(req, res) {
   const data = await redis.hgetall("graffiti:agents");
-  if (!data) return json({ agents: [] });
+  if (!data) return json(res, { agents: [] });
 
   const agents = Object.values(data).map((v) => {
     const a = typeof v === "string" ? JSON.parse(v) : v;
@@ -161,53 +154,36 @@ async function handleAgents() {
   });
 
   agents.sort((a, b) => (b.pixels_painted || 0) - (a.pixels_painted || 0));
-  return json({ agents });
+  return json(res, { agents });
 }
 
-async function handleLog() {
+async function handleLog(req, res) {
   const entries = await redis.lrange("graffiti:log", 0, 49);
   const log = (entries || []).map((e) => (typeof e === "string" ? JSON.parse(e) : e));
-  return json({ log });
+  return json(res, { log });
 }
 
 // --- Router ---
 
-export default async function handler(req) {
-  const url = new URL(req.url, "http://localhost");
+export default async function handler(req, res) {
+  const url = new URL(req.url, `http://${req.headers.host}`);
   const path = url.pathname.replace(/\/+$/, "");
   const method = req.method;
 
   if (method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: CORS_HEADERS });
+    cors(res);
+    return res.status(204).end();
   }
 
   try {
-    if (path === "/api/register" && method === "POST") {
-      const body = await req.json();
-      return handleRegister(body);
-    }
+    if (path === "/api/register" && method === "POST") return handleRegister(req, res);
+    if (path === "/api/paint" && method === "POST") return handlePaint(req, res);
+    if (path === "/api/canvas" && method === "GET") return handleCanvas(req, res);
+    if (path === "/api/agents" && method === "GET") return handleAgents(req, res);
+    if (path === "/api/log" && method === "GET") return handleLog(req, res);
 
-    if (path === "/api/paint" && method === "POST") {
-      const auth = req.headers.get("authorization") || "";
-      const apiKey = auth.replace(/^Bearer\s+/i, "").trim();
-      const body = await req.json();
-      return handlePaint(body, apiKey);
-    }
-
-    if (path === "/api/canvas" && method === "GET") {
-      return handleCanvas();
-    }
-
-    if (path === "/api/agents" && method === "GET") {
-      return handleAgents();
-    }
-
-    if (path === "/api/log" && method === "GET") {
-      return handleLog();
-    }
-
-    return json({ error: "not found", routes: ["/api/register", "/api/paint", "/api/canvas", "/api/agents", "/api/log"] }, 404);
+    return json(res, { error: "not found", routes: ["/api/register", "/api/paint", "/api/canvas", "/api/agents", "/api/log"] }, 404);
   } catch (err) {
-    return json({ error: "internal error", message: err.message }, 500);
+    return json(res, { error: "internal error", message: err.message }, 500);
   }
 }
