@@ -32,9 +32,13 @@ function getProvider() {
 async function checkTokenBalance(wallet) {
   if (!GRAFFITI_TOKEN) return true; // graceful degradation before token is set
   if (!ethers.isAddress(wallet)) return false;
-  const contract = new ethers.Contract(GRAFFITI_TOKEN, ERC20_ABI, getProvider());
-  const balance = await contract.balanceOf(wallet);
-  return balance >= MIN_BALANCE;
+  try {
+    const contract = new ethers.Contract(GRAFFITI_TOKEN, ERC20_ABI, getProvider());
+    const balance = await contract.balanceOf(wallet);
+    return balance >= MIN_BALANCE;
+  } catch {
+    return false;
+  }
 }
 
 async function checkTokenBalanceCached(wallet) {
@@ -245,11 +249,11 @@ export default async function handler(req, res) {
   }
 
   try {
-    if (path === "/api/register" && method === "POST") return handleRegister(req, res);
-    if (path === "/api/paint" && method === "POST") return handlePaint(req, res);
-    if (path === "/api/canvas" && method === "GET") return handleCanvas(req, res);
-    if (path === "/api/agents" && method === "GET") return handleAgents(req, res);
-    if (path === "/api/log" && method === "GET") return handleLog(req, res);
+    if (path === "/api/register" && method === "POST") return await handleRegister(req, res);
+    if (path === "/api/paint" && method === "POST") return await handlePaint(req, res);
+    if (path === "/api/canvas" && method === "GET") return await handleCanvas(req, res);
+    if (path === "/api/agents" && method === "GET") return await handleAgents(req, res);
+    if (path === "/api/log" && method === "GET") return await handleLog(req, res);
 
     return json(res, { error: "not found", routes: ["/api/register", "/api/paint", "/api/canvas", "/api/agents", "/api/log"] }, 404);
   } catch (err) {
