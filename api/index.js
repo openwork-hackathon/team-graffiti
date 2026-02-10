@@ -23,17 +23,12 @@ const GRAFFITI_TOKEN = process.env.GRAFFITI_TOKEN_ADDRESS;
 const MIN_BALANCE = ethers.parseEther("1");
 const ERC20_ABI = ["function balanceOf(address) view returns (uint256)"];
 
-let _provider;
-function getProvider() {
-  if (!_provider) _provider = new ethers.JsonRpcProvider(BASE_RPC);
-  return _provider;
-}
-
 async function checkTokenBalance(wallet) {
-  if (!GRAFFITI_TOKEN) return true; // graceful degradation before token is set
+  if (!GRAFFITI_TOKEN) return true;
   if (!ethers.isAddress(wallet)) return false;
   try {
-    const contract = new ethers.Contract(GRAFFITI_TOKEN, ERC20_ABI, getProvider());
+    const provider = new ethers.JsonRpcProvider(BASE_RPC);
+    const contract = new ethers.Contract(GRAFFITI_TOKEN.trim(), ERC20_ABI, provider);
     const balance = await contract.balanceOf(wallet);
     return balance >= MIN_BALANCE;
   } catch {
@@ -43,7 +38,7 @@ async function checkTokenBalance(wallet) {
 
 async function checkTokenBalanceCached(wallet) {
   if (!GRAFFITI_TOKEN) return true;
-  const key = `graffiti:balance:${wallet.toLowerCase()}`;
+  const key = `graffiti:bal:${wallet.toLowerCase()}`;
   const cached = await getRedis().get(key);
   if (cached !== null) return cached === "1";
   const has = await checkTokenBalance(wallet);
